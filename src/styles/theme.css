@@ -1,0 +1,116 @@
+/* =============================================================================
+   ZADRI Luxe App — Système de design : tokens de couleur
+   Référence : §6 du cahier des charges (identité visuelle)
+   Mode clair  → :root
+   Mode sombre → html[data-theme="dark"]  +  @media prefers-color-scheme: dark
+   =========================================================================== */
+
+:root {
+  /* ── Fonds ─────────────────────────────────────────────────────────────── */
+  --color-bg:          #F7F5F0;
+  --color-surface:     #FFFFFF;
+  --color-surface-alt: #F1EEE6;
+  --color-nav-bg:      #FFFFFF;
+
+  /* ── Texte ──────────────────────────────────────────────────────────────── */
+  --color-text:        #1A1A1A;
+  --color-text-muted:  #6E6A61;
+
+  /* ── Bordures ───────────────────────────────────────────────────────────── */
+  --color-border:      #E6E2D8;
+
+  /* ── Actions principales (vert ZADRI) ───────────────────────────────────── */
+  --color-primary:     #17824F;
+  --color-primary-rgb: 23, 130, 79;        /* pour les transparences RGBA */
+
+  /* ── Mise en avant / alerte positive (doré) ─────────────────────────────── */
+  --color-accent:      #E0982E;
+  --color-accent-bg:   #FBF0DC;
+  --color-accent-rgb:  224, 152, 46;
+
+  /* ── Danger / pertes / erreurs ──────────────────────────────────────────── */
+  --color-danger:      #C94B33;
+  --color-danger-bg:   #F7E3DE;
+  --color-danger-rgb:  201, 75, 51;
+
+  /* ── Rayons d'arrondi ───────────────────────────────────────────────────── */
+  --radius-card-lg:    20px;   /* blocs de synthèse */
+  --radius-card-md:    16px;   /* cartes commande   */
+  --radius-card-sm:    14px;   /* petites cartes, inputs */
+  --radius-pill:       999px;  /* badges, filtres, boutons variante */
+
+  /* ── Ombres ─────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-nav: 0 -1px 0 var(--color-border), 0 -4px 12px rgba(0,0,0,0.04);
+
+  /* ── Bouton central Vendre ──────────────────────────────────────────────── */
+  --shadow-sell-btn: 0 4px 16px rgba(var(--color-primary-rgb), 0.4),
+                     0 2px 6px  rgba(var(--color-primary-rgb), 0.3);
+
+  /* ── Transitions ────────────────────────────────────────────────────────── */
+  --transition-fast:   0.15s ease;
+  --transition-base:   0.22s ease;
+}
+
+/* ── Mode sombre : préférence système (aucun choix enregistré) ──────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg:          #12171D;
+    --color-surface:     #1B2420;
+    --color-surface-alt: #212B25;
+    --color-nav-bg:      #161C18;
+
+    --color-text:        #F3F1EA;
+    --color-text-muted:  #9BA69E;
+
+    --color-border:      #2A332C;
+
+    --color-primary:     #34B378;
+    --color-primary-rgb: 52, 179, 120;
+
+    --color-accent:      #F0B94E;
+    --color-accent-bg:   rgba(240, 185, 78, 0.15);
+    --color-accent-rgb:  240, 185, 78;
+
+    --color-danger:      #F2846B;
+    --color-danger-bg:   rgba(242, 132, 107, 0.15);
+    --color-danger-rgb:  242, 132, 107;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-nav: 0 -1px 0 var(--color-border), 0 -4px 12px rgba(0,0,0,0.2);
+    --shadow-sell-btn: 0 4px 16px rgba(var(--color-primary-rgb), 0.5),
+                       0 2px 6px  rgba(var(--color-primary-rgb), 0.35);
+  }
+}
+
+/* ── Mode sombre : choix explicite de l'utilisateur ────────────────────── */
+html[data-theme="dark"] {
+  --color-bg:          #12171D;
+  --color-surface:     #1B2420;
+  --color-surface-alt: #212B25;
+  --color-nav-bg:      #161C18;
+
+  --color-text:        #F3F1EA;
+  --color-text-muted:  #9BA69E;
+
+  --color-border:      #2A332C;
+
+  --color-primary:     #34B378;
+  --color-primary-rgb: 52, 179, 120;
+
+  --color-accent:      #F0B94E;
+  --color-accent-bg:   rgba(240, 185, 78, 0.15);
+  --color-accent-rgb:  240, 185, 78;
+
+  --color-danger:      #F2846B;
+  --color-danger-bg:   rgba(242, 132, 107, 0.15);
+  --color-danger-rgb:  242, 132, 107;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-nav: 0 -1px 0 var(--color-border), 0 -4px 12px rgba(0,0,0,0.2);
+  --shadow-sell-btn: 0 4px 16px rgba(var(--color-primary-rgb), 0.5),
+                     0 2px 6px  rgba(var(--color-primary-rgb), 0.35);
+}
