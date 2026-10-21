@@ -2,7 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { ShieldCheck, UserCheck, KeyRound, LogOut, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, UserCheck, KeyRound, LogOut, Sun, Moon, Package, Plus, ArrowRight } from 'lucide-react';
+import { BottomNav } from '../components/ui/BottomNav';
 
 export const Home: React.FC = () => {
   const { user, profile, signOut } = useAuth();
@@ -123,6 +124,70 @@ export const Home: React.FC = () => {
         </Link>
       </div>
 
+      {/* ── Module Commandes ────────────────────────────────────────────── */}
+      <div
+        style={{
+          backgroundColor: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-card-lg)',
+          padding: '20px',
+          marginBottom: '16px',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: 'var(--radius-circle, 50%)',
+              backgroundColor: 'rgba(var(--color-primary-rgb), 0.12)',
+              color: 'var(--color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Package size={22} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
+                Commandes & Approvisionnements
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                Chine, Turquie, Dubaï, Fournisseurs locaux
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '16px' }}>
+          <Link
+            to="/commandes"
+            className="btn-secondary"
+            style={{
+              textDecoration: 'none',
+              justifyContent: 'center',
+              fontSize: '0.82rem',
+              padding: '10px 12px',
+            }}
+          >
+            Voir les commandes <ArrowRight size={14} />
+          </Link>
+          <Link
+            to="/commandes/nouvelle"
+            className="btn-primary"
+            style={{
+              textDecoration: 'none',
+              justifyContent: 'center',
+              fontSize: '0.82rem',
+              padding: '10px 12px',
+            }}
+          >
+            <Plus size={15} /> Nouvelle commande
+          </Link>
+        </div>
+      </div>
+
       {/* ── Statut du socle V1 ────────────────────────────────────────────── */}
       <div style={{
         backgroundColor: 'var(--color-surface-alt)',
@@ -137,9 +202,12 @@ export const Home: React.FC = () => {
           <li>✓ <strong>Étape 2</strong> : RLS étanche et comptes associés provisionnés</li>
           <li>✓ <strong>Étape 3</strong> : Vues financières conformes au jeu de test §14</li>
           <li>✓ <strong>Étape 4</strong> : Authentification et sessions persistantes actives</li>
-          <li>✓ <strong>Étape 4+</strong> : Système de design ZADRI appliqué</li>
+          <li>✓ <strong>Étape 5</strong> : Module Commandes multi-provenances activé</li>
         </ul>
       </div>
+
+      {/* Barre de navigation inférieure */}
+      <BottomNav />
     </div>
   );
 };

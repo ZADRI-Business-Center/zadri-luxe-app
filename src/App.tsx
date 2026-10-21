@@ -25,10 +25,16 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/"                      element={<Home />} />
             <Route path="/change-password"       element={<ChangePassword />} />
-            <Route path="/commandes"             element={<OrdersList />} />
-            <Route path="/commandes/nouvelle"    element={<OrderForm />} />
-            <Route path="/commandes/:id"         element={<OrderDetail />} />
+            {/* Module Commandes (FR & EN) */}
+            <Route path="/commandes"              element={<OrdersList />} />
+            <Route path="/commandes/nouvelle"     element={<OrderForm />} />
+            <Route path="/commandes/:id"          element={<OrderDetail />} />
             <Route path="/commandes/:id/modifier" element={<OrderForm />} />
+
+            <Route path="/orders"                 element={<OrdersList />} />
+            <Route path="/orders/new"             element={<OrderForm />} />
+            <Route path="/orders/:id"             element={<OrderDetail />} />
+            <Route path="/orders/:id/edit"        element={<OrderForm />} />
           </Route>
         </Routes>
       </AuthProvider>
