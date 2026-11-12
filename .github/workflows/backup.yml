@@ -1,0 +1,86 @@
+name: Sauvegarde Quotidienne Base de Données (Supabase)
+
+on:
+  # Exécution quotidienne à 02h00 UTC (02h00 Abidjan / GMT)
+  schedule:
+    - cron: "0 2 * * *"
+  # Déclenchement manuel depuis l'onglet Actions de GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    name: Exporter et archiver la base Supabase
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Installer la dernière version du client PostgreSQL (PostgreSQL 16/17)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lsb-release ca-certificates curl gnupg
+          sudo install -d /etc/apt/keyrings
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+
+      - name: Exporter le schéma public (pg_dump)
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::Le secret SUPABASE_DB_URL n'est pas défini dans GitHub Actions Secrets."
+            exit 1
+          fi
+
+          mkdir -p dumps
+          BACKUP_FILE="dumps/backup-$(date -u +%F_%H%M%S).sql.gz"
+          echo "Exportation de la base vers $BACKUP_FILE..."
+
+          # Export propre : schéma public uniquement, sans propriétaires ni privilèges absolus
+          pg_dump "$DB_URL" \
+            --schema=public \
+            --no-owner \
+            --no-privileges \
+            --clean \
+            --if-exists \
+            --quote-all-identifiers \
+            | gzip -9 > "$BACKUP_FILE"
+
+          # Vérification de la validité du fichier généré
+          if [ ! -s "$BACKUP_FILE" ]; then
+            echo "::error::Le fichier de sauvegarde est vide ou la commande pg_dump a échoué."
+            exit 1
+          fi
+
+          echo "Sauvegarde réussie : $(du -h "$BACKUP_FILE")"
+
+      - name: Nettoyer les sauvegardes anciennes (conserver les 30 plus récentes)
+        run: |
+          COUNT=$(ls -1t dumps/backup-*.sql.gz 2>/dev/null | wc -l)
+          echo "Nombre total de sauvegardes : $COUNT"
+          if [ "$COUNT" -gt 30 ]; then
+            echo "Suppression des sauvegardes au-delà des 30 dernières..."
+            ls -1t dumps/backup-*.sql.gz | tail -n +31 | xargs -r rm -v --
+          fi
+
+      - name: Valider et pousser vers GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dumps/
+          if git diff --staged --quiet; then
+            echo "Aucun nouveau dump à valider."
+          else
+            git commit -m "chore(backup): sauvegarde automatique du $(date -u '+%d/%m/%Y %H:%M:%S UTC')"
+            git push
+            echo "Dump enregistré et poussé avec succès."
+          fi
+

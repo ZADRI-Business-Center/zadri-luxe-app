@@ -1,0 +1,3 @@
+# Dossier contenant les archives quotidiennes de sauvegarde compressées (.sql.gz)
+# Conservé par le workflow GitHub Actions .github/workflows/backup.yml
+

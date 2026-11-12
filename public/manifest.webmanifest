@@ -1,0 +1,71 @@
+{
+  "id": "/",
+  "name": "ZADRI Luxe — Gestion de Stock & Ventes",
+  "short_name": "ZADRI Luxe",
+  "description": "Application PWA de gestion de stock, commandes et encaissement rapide pour ZADRI Luxe.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1410",
+  "theme_color": "#17824F",
+  "lang": "fr-FR",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Vente rapide",
+      "short_name": "Vendre",
+      "description": "Encaisser une vente en moins de 10 secondes",
+      "url": "/vendre",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Catalogue Articles",
+      "short_name": "Articles",
+      "description": "Consulter les fiches et variantes d'articles",
+      "url": "/articles",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Commandes Fournisseurs",
+      "short_name": "Commandes",
+      "description": "Suivi des commandes Chine, Turquie, Dubaï",
+      "url": "/commandes",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Invendus & Décotes",
+      "short_name": "Invendus",
+      "description": "Articles dormants et baisses de prix",
+      "url": "/invendus",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+
