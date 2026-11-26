@@ -268,19 +268,20 @@ a {
 
 /* ─── Alertes ────────────────────────────────────────────────────────────── */
 .alert-box {
-  padding: 12px 14px;
-  border-radius: var(--radius-card-sm);
+  padding: 13px 16px;
+  border-radius: var(--radius-card-md, 12px);
   font-size: 0.85rem;
   line-height: 1.45;
   margin-bottom: 16px;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .alert-danger {
   background-color: var(--color-danger-bg);
-  border: 1px solid rgba(var(--color-danger-rgb), 0.3);
+  border: 1px solid rgba(var(--color-danger-rgb), 0.35);
   color: var(--color-danger);
 }
 

@@ -253,12 +253,11 @@ export const OrdersList: React.FC = () => {
           paddingBottom: '4px',
           scrollbarWidth: 'none',
         }}>
-          {(['all', 'ordered', 'shipping', 'received'] as const).map((st) => {
+          {(['all', 'ordered', 'received'] as const).map((st) => {
             const isSelected = statusFilter === st;
             const label =
               st === 'all' ? 'Tous les statuts' :
-              st === 'ordered' ? 'Commandées' :
-              st === 'shipping' ? 'En transit' : 'Reçues';
+              st === 'ordered' ? 'Commandées' : 'Reçues';
 
             return (
               <button

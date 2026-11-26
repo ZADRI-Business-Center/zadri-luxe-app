@@ -67,7 +67,6 @@ export const DormantStockList: React.FC = () => {
   const [lossQty, setLossQty] = useState<number>(1);
   const [lossReason, setLossReason] = useState<LossReason>('damaged');
   const [lossNote, setLossNote] = useState<string>('');
-  const [lossOccurredOn, setLossOccurredOn] = useState<string>(new Date().toISOString().slice(0, 10));
   const [lossLoading, setLossLoading] = useState(false);
   const [lossError, setLossError] = useState<string | null>(null);
 
@@ -195,7 +194,6 @@ export const DormantStockList: React.FC = () => {
     setLossQty(1);
     setLossReason('damaged');
     setLossNote('');
-    setLossOccurredOn(new Date().toISOString().slice(0, 10));
     setLossError(null);
   };
 
@@ -215,7 +213,7 @@ export const DormantStockList: React.FC = () => {
         variant_id: variantToLoss.variant_id,
         quantity: lossQty,
         reason: lossReason,
-        occurred_on: lossOccurredOn,
+        occurred_on: new Date().toISOString().slice(0, 10),
         note: lossNote.trim() || undefined,
       });
 
@@ -992,27 +990,15 @@ export const DormantStockList: React.FC = () => {
                 </div>
               </div>
 
-              {/* Date */}
-              <div>
-                <label className="form-label" style={{ fontSize: '0.76rem' }}>Date de survenance</label>
-                <input
-                  type="date"
-                  required
-                  className="form-input"
-                  value={lossOccurredOn}
-                  onChange={(e) => setLossOccurredOn(e.target.value)}
-                />
-              </div>
-
               {/* Note */}
               <div>
-                <label className="form-label" style={{ fontSize: '0.76rem' }}>Note de contexte (facultative)</label>
+                <label className="form-label" style={{ fontSize: '0.76rem' }}>Note explicative (facultative)</label>
                 <input
                   type="text"
                   className="form-input"
                   value={lossNote}
                   onChange={(e) => setLossNote(e.target.value)}
-                  placeholder="Ex. Verre fêlé pendant le transport local"
+                  placeholder="Ex. Verre fêlé pendant le transport, offert..."
                 />
               </div>
 

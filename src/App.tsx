@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { ForgotPassword } from './pages/ForgotPassword';
@@ -26,8 +27,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <OfflineBanner />
-        <Routes>
+        <ToastProvider>
+          <OfflineBanner />
+          <Routes>
           {/* Routes publiques */}
           <Route path="/login"           element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -70,6 +72,7 @@ function App() {
             <Route path="/settings"                    element={<SettingsPage />} />
           </Route>
         </Routes>
+        </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );

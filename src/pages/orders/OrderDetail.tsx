@@ -26,6 +26,7 @@ import {
 } from '../../types/orders';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { BottomNav } from '../../components/ui/BottomNav';
+import { formatErrorMessage } from '../../lib/errorUtils';
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +54,7 @@ export const OrderDetail: React.FC = () => {
       setItems(res.items);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || 'Erreur lors du chargement de la commande.');
+      setError(formatErrorMessage(err, 'Erreur lors du chargement de la commande.'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export const OrderDetail: React.FC = () => {
       setShowReceiveModal(false);
       await loadData();
     } catch (err: any) {
-      alert(err?.message || 'Erreur lors du passage à la réception.');
+      setError(formatErrorMessage(err, 'Erreur lors de la validation de réception.'));
     } finally {
       setMarkingReceived(false);
     }
@@ -390,21 +391,23 @@ export const OrderDetail: React.FC = () => {
             </p>
           </div>
 
-          <Link
-            to="/articles"
-            className="btn-secondary"
-            style={{
-              textDecoration: 'none',
-              fontSize: '0.78rem',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-pill)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <Plus size={15} /> Voir les articles
-          </Link>
+          {order.status === 'received' && (
+            <Link
+              to={`/articles/nouveau?orderId=${order.id}`}
+              className="btn-primary"
+              style={{
+                textDecoration: 'none',
+                fontSize: '0.78rem',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-pill)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <Plus size={15} /> Ajouter un article
+            </Link>
+          )}
         </div>
 
         {items.length === 0 ? (
@@ -416,24 +419,37 @@ export const OrderDetail: React.FC = () => {
             textAlign: 'center',
           }}>
             <Package size={32} style={{ color: 'var(--color-text-muted)', margin: '0 auto 8px' }} />
-            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>
-              Aucun article rattaché pour l'instant
-            </p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '4px 0 14px' }}>
-              Une fois la commande arrivée, enregistrez les articles avec leurs variantes et photos.
-            </p>
-            <Link
-              to="/articles"
-              className="btn-primary"
-              style={{
-                textDecoration: 'none',
-                display: 'inline-flex',
-                fontSize: '0.8rem',
-                padding: '6px 14px',
-              }}
-            >
-              <Plus size={15} /> Créer les articles (Étape 6)
-            </Link>
+            {order.status === 'received' ? (
+              <>
+                <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>
+                  Aucun article enregistré pour l'instant
+                </p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '4px 0 14px' }}>
+                  Enregistrez les articles reçus avec leurs variantes et photos.
+                </p>
+                <Link
+                  to={`/articles/nouveau?orderId=${order.id}`}
+                  className="btn-primary"
+                  style={{
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                  }}
+                >
+                  <Plus size={15} /> Enregistrer les articles reçus
+                </Link>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>
+                  Commande en attente de réception
+                </p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '4px 0 0' }}>
+                  Les articles pourront être enregistrés une fois la commande marquée comme reçue.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

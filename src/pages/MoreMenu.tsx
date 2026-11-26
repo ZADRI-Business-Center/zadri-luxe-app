@@ -1,18 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CheckCircle2,
   ChevronRight,
-  Download,
   FileText,
   History,
   KeyRound,
-  LayoutGrid,
   LogOut,
   Moon,
-  Package,
-  Settings,
-  Smartphone,
   Sun,
   Trash2,
   TrendingDown,
@@ -24,52 +18,6 @@ import { useTheme } from '../contexts/ThemeContext';
 export const MoreMenu: React.FC = () => {
   const { user, profile, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
-
-  // Détection installation PWA (§11)
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [isIos, setIsIos] = useState(false);
-  const [showIosGuide, setShowIosGuide] = useState(false);
-
-  useEffect(() => {
-    // Vérifier si l'application s'exécute déjà en mode PWA standalone
-    const isStandaloneMode =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as any).standalone ||
-      document.referrer.includes('android-app://');
-    setIsStandalone(Boolean(isStandaloneMode));
-
-    // Détection iOS Safari
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIos(isIosDevice);
-
-    // Écouter l'événement beforeinstallprompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      if (isIos) {
-        setShowIosGuide((prev) => !prev);
-      }
-      return;
-    }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsStandalone(true);
-    }
-    setDeferredPrompt(null);
-  };
 
   return (
     <div
@@ -146,90 +94,6 @@ export const MoreMenu: React.FC = () => {
             {user?.email}
           </div>
         </div>
-      </div>
-
-      {/* ── Section PWA / Installation Mobile (§11) ────────────────────── */}
-      <div
-        style={{
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-card)',
-          padding: '14px 16px',
-          marginBottom: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: 'var(--radius-card-sm)',
-                backgroundColor: isStandalone ? 'rgba(23, 130, 79, 0.12)' : 'rgba(224, 152, 46, 0.14)',
-                color: isStandalone ? 'var(--color-primary)' : 'var(--color-accent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {isStandalone ? <CheckCircle2 size={20} /> : <Smartphone size={20} />}
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--color-text)' }}>
-                {isStandalone ? 'Application installée (PWA active)' : 'Installer sur l’écran d’accueil'}
-              </div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
-                {isStandalone
-                  ? 'Ouverture instantanée sans barre d’adresse.'
-                  : 'Accédez à ZADRI en 1 tap comme une application native.'}
-              </div>
-            </div>
-          </div>
-
-          {!isStandalone && (
-            <button
-              type="button"
-              onClick={handleInstallClick}
-              className="btn-primary"
-              style={{
-                width: 'auto',
-                minHeight: '34px',
-                padding: '0 12px',
-                fontSize: '0.78rem',
-                borderRadius: 'var(--radius-pill)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <Download size={14} />
-              {isIos ? 'Instructions' : 'Installer'}
-            </button>
-          )}
-        </div>
-
-        {/* Guide d'installation Safari iOS si demandé */}
-        {showIosGuide && !isStandalone && (
-          <div
-            className="animate-fade-in"
-            style={{
-              marginTop: '12px',
-              paddingTop: '10px',
-              borderTop: '1px solid var(--color-border)',
-              fontSize: '0.76rem',
-              color: 'var(--color-text)',
-              lineHeight: 1.5,
-            }}
-          >
-            <strong>Sur iPhone (Safari) :</strong>
-            <ol style={{ paddingLeft: '18px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <li>Appuyez sur le bouton de <strong>Partage</strong> en bas de l'écran (carré avec flèche vers le haut).</li>
-              <li>Faites défiler vers le bas et sélectionnez <strong>« Sur l'écran d'accueil »</strong>.</li>
-              <li>Validez en haut à droite avec <strong>« Ajouter »</strong>.</li>
-            </ol>
-          </div>
-        )}
       </div>
 
       {/* ── Section Opérations ────────────────────────────────────────── */}
@@ -343,73 +207,10 @@ export const MoreMenu: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Section Catalogue & Approvisionnement ─────────────────────── */}
-      <div style={{ marginBottom: '18px' }}>
-        <h2 style={{ fontSize: '0.76rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', letterSpacing: '0.05em', marginBottom: '8px', paddingLeft: '4px', fontWeight: 700 }}>
-          Catalogue & Commandes
-        </h2>
-
-        <div
-          style={{
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-card)',
-            overflow: 'hidden',
-          }}
-        >
-          <Link
-            to="/articles"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '14px 16px',
-              textDecoration: 'none',
-              color: 'var(--color-text)',
-              borderBottom: '1px solid var(--color-border)',
-            }}
-          >
-            <div style={{ color: 'var(--color-primary)', display: 'flex' }}>
-              <LayoutGrid size={20} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Catalogue d'articles</div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
-                Fiches articles, variantes et photos
-              </div>
-            </div>
-            <ChevronRight size={18} color="var(--color-text-muted)" />
-          </Link>
-
-          <Link
-            to="/commandes"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '14px 16px',
-              textDecoration: 'none',
-              color: 'var(--color-text)',
-            }}
-          >
-            <div style={{ color: 'var(--color-primary)', display: 'flex' }}>
-              <Package size={20} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Commandes fournisseurs</div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
-                Approvisionnements Chine, Turquie, Dubaï & Local
-              </div>
-            </div>
-            <ChevronRight size={18} color="var(--color-text-muted)" />
-          </Link>
-        </div>
-      </div>
-
       {/* ── Section Compte & Sécurité ─────────────────────────────────── */}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '0.76rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', letterSpacing: '0.05em', marginBottom: '8px', paddingLeft: '4px', fontWeight: 700 }}>
-          Paramètres & Compte
+          Compte & Sécurité
         </h2>
 
         <div
@@ -420,30 +221,6 @@ export const MoreMenu: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          <Link
-            to="/parametres"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '14px 16px',
-              textDecoration: 'none',
-              color: 'var(--color-text)',
-              borderBottom: '1px solid var(--color-border)',
-            }}
-          >
-            <div style={{ color: 'var(--color-primary)', display: 'flex' }}>
-              <Settings size={20} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Paramètres de l'application</div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
-                Seuils d'invendus, fuseau horaire & catégories
-              </div>
-            </div>
-            <ChevronRight size={18} color="var(--color-text-muted)" />
-          </Link>
-
           <Link
             to="/change-password"
             style={{

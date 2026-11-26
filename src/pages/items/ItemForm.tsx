@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowLeft,
@@ -30,6 +30,8 @@ import {
 } from '../../lib/itemsService';
 import { formatFCFA } from '../../types/orders';
 import type { Category, ReceivedOrderOption, VariantPayload } from '../../types/items';
+import { useToast } from '../../contexts/ToastContext';
+import { formatErrorMessage } from '../../lib/errorUtils';
 
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 function parseFCFA(raw: string): number {
@@ -65,7 +67,12 @@ function newVariant(): VariantDraft {
 export const ItemForm: React.FC = () => {
   const navigate = useNavigate();
   const { id: itemId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const toast = useToast();
   const isEdit = Boolean(itemId);
+
+  // orderId pré-sélectionné depuis la query string ?orderId=...
+  const preselectedOrderId = searchParams.get('orderId') ?? '';
 
   /* ── chargement des listes ────────────────────────────────────────────── */
   const [categories, setCategories] = useState<Category[]>([]);
@@ -76,7 +83,9 @@ export const ItemForm: React.FC = () => {
   /* ── état du formulaire article ───────────────────────────────────────── */
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [orderId, setOrderId] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [orderId, setOrderId] = useState(preselectedOrderId); // pré-sélectionné si venu d'une commande
   const [listPrice, setListPrice] = useState('');
   const [unitCost, setUnitCost] = useState('');
   const [description, setDescription] = useState('');
@@ -93,9 +102,8 @@ export const ItemForm: React.FC = () => {
   const [variants, setVariants] = useState<VariantDraft[]>([newVariant()]);
 
   /* ── catégorie rapide ────────────────────────────────────────────────── */
-  const [newCatName, setNewCatName] = useState('');
   const [addingCat, setAddingCat] = useState(false);
-  const [showNewCat, setShowNewCat] = useState(false);
+  const categoryWrapperRef = useRef<HTMLDivElement>(null);
 
   /* ── soumission ──────────────────────────────────────────────────────── */
   const [saving, setSaving] = useState(false);
@@ -116,6 +124,10 @@ export const ItemForm: React.FC = () => {
         const item = detail.item;
         setName(item.item_name);
         setCategoryId(item.category_id ?? '');
+        if (item.category_id) {
+          const matchedCat = cats.find((c) => c.id === item.category_id);
+          if (matchedCat) setCategorySearch(matchedCat.name);
+        }
         setOrderId(item.order_id);
         setListPrice(fmtInput(item.list_price));
         setUnitCost(fmtInput(item.unit_cost));
@@ -146,6 +158,17 @@ export const ItemForm: React.FC = () => {
   }, [isEdit, itemId]);
 
   useEffect(() => { void loadMeta(); }, [loadMeta]);
+
+  // Fermer le menu déroulant des catégories quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryWrapperRef.current && !categoryWrapperRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   /* ── gestion photo principale ─────────────────────────────────────────── */
   const handlePhotoChange = async (file: File) => {
@@ -221,15 +244,16 @@ export const ItemForm: React.FC = () => {
   ) => setVariants((prev) => prev.map((v) => (v._key === key ? { ...v, [field]: value } : v)));
 
   /* ── créer catégorie rapide ───────────────────────────────────────────── */
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
+  const handleCreateCategory = async (nameToCreate: string) => {
+    const trimmed = nameToCreate.trim();
+    if (!trimmed) return;
     setAddingCat(true);
     try {
-      const cat = await createCategory(newCatName.trim());
+      const cat = await createCategory(trimmed);
       setCategories((prev) => [...prev, cat].sort((a, b) => a.name.localeCompare(b.name)));
       setCategoryId(cat.id);
-      setNewCatName('');
-      setShowNewCat(false);
+      setCategorySearch(cat.name);
+      setShowCategoryDropdown(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de créer la catégorie.');
     } finally {
@@ -243,15 +267,37 @@ export const ItemForm: React.FC = () => {
     setError(null);
 
     // Validations rapides
-    if (!name.trim()) { setError('Le nom de l\'article est obligatoire.'); return; }
-    if (!orderId) { setError('Veuillez sélectionner une commande d\'origine.'); return; }
+    if (!name.trim()) {
+      const msg = 'Le nom de l\'article est obligatoire.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!orderId) {
+      const msg = 'Veuillez sélectionner une commande d\'origine.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     const price = parseFCFA(listPrice);
-    if (price <= 0) { setError('Le prix fixé doit être supérieur à 0.'); return; }
+    if (price <= 0) {
+      const msg = 'Le prix fixé doit être supérieur à 0.';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
 
     for (const v of variants) {
-      if (!v.label.trim()) { setError('Chaque variante doit avoir un libellé.'); return; }
+      if (!v.label.trim()) {
+        const msg = 'Chaque variante doit avoir un libellé.';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
       if (v.quantity_damaged > v.quantity_received) {
-        setError(`La quantité abîmée de la variante "${v.label}" dépasse la quantité reçue.`);
+        const msg = `La quantité abîmée de la variante "${v.label}" dépasse la quantité reçue.`;
+        setError(msg);
+        toast.error(msg);
         return;
       }
     }
@@ -305,6 +351,7 @@ export const ItemForm: React.FC = () => {
           variants: finalVariants,
         });
         setSuccess(true);
+        toast.success('Article mis à jour avec succès !');
         setTimeout(() => navigate(`/articles/${itemId}`), 1000);
       } else {
         const newItemId = await createItem({
@@ -319,10 +366,17 @@ export const ItemForm: React.FC = () => {
           variants: finalVariants,
         });
         setSuccess(true);
-        setTimeout(() => navigate(`/articles/${newItemId}`), 1000);
+        toast.success('Article créé avec succès !');
+        // Si on vient d'une commande (preselectedOrderId), retourner à la commande après sauvegarde
+        const redirectTarget = preselectedOrderId
+          ? `/commandes/${preselectedOrderId}`
+          : `/articles/${newItemId}`;
+        setTimeout(() => navigate(redirectTarget), 1000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      const friendlyMsg = formatErrorMessage(err, 'Une erreur est survenue lors de l\'enregistrement.');
+      setError(friendlyMsg);
+      toast.error(friendlyMsg);
     } finally {
       setSaving(false);
     }
@@ -469,10 +523,10 @@ export const ItemForm: React.FC = () => {
             />
           </div>
 
-          {/* Commande d'origine (désactivée en mode édition) */}
+          {/* Commande d'origine (désactivée en mode édition ou si pré-sélectionnée) */}
           <div className="form-group">
             <label className="form-label" htmlFor="item-order">Commande d'origine *</label>
-            {isEdit ? (
+            {isEdit || preselectedOrderId ? (
               <div
                 className="zadri-input"
                 style={{ opacity: 0.7, cursor: 'not-allowed', background: 'var(--color-surface-alt)' }}
@@ -504,61 +558,149 @@ export const ItemForm: React.FC = () => {
             )}
           </div>
 
-          {/* Catégorie */}
-          <div className="form-group">
+          {/* Catégorie avec autocomplétion et création à la volée */}
+          <div className="form-group" ref={categoryWrapperRef} style={{ position: 'relative' }}>
             <label className="form-label" htmlFor="item-category">Catégorie</label>
-            <select
-              id="item-category"
-              className="zadri-input"
-              value={categoryId}
-              onChange={(e) => {
-                if (e.target.value === '__new__') { setShowNewCat(true); return; }
-                setCategoryId(e.target.value);
-              }}
-            >
-              <option value="">— Aucune catégorie —</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              <option value="__new__">+ Créer une catégorie…</option>
-            </select>
+            <div style={{ position: 'relative' }}>
+              <input
+                id="item-category"
+                className="zadri-input"
+                type="text"
+                value={categorySearch}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCategorySearch(val);
+                  setShowCategoryDropdown(true);
+                  const exact = categories.find((c) => c.name.toLowerCase() === val.trim().toLowerCase());
+                  setCategoryId(exact ? exact.id : '');
+                }}
+                onFocus={() => setShowCategoryDropdown(true)}
+                placeholder="Tapez pour chercher ou créer une catégorie…"
+                autoComplete="off"
+                style={{ paddingRight: categoryId || categorySearch ? '40px' : '14px' }}
+              />
+              {(categoryId || categorySearch) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategorySearch('');
+                    setCategoryId('');
+                    setShowCategoryDropdown(false);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  aria-label="Effacer la catégorie"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
 
-            {showNewCat && (
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <input
-                  className="zadri-input"
-                  type="text"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  placeholder="Nom de la nouvelle catégorie"
-                  style={{ flex: 1 }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAddCategory(); } }}
-                />
-                <button
-                  type="button"
-                  className="btn-primary"
-                  style={{ width: 'auto', padding: '0 16px', minHeight: '48px' }}
-                  onClick={() => void handleAddCategory()}
-                  disabled={addingCat || !newCatName.trim()}
-                >
-                  {addingCat ? <div className="spinner" /> : 'Créer'}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ width: 'auto', padding: '0 10px', minHeight: '48px' }}
-                  onClick={() => { setShowNewCat(false); setNewCatName(''); }}
-                >
-                  <X size={16} />
-                </button>
+            {/* Menu suggestions & création */}
+            {showCategoryDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-card-md)',
+                  boxShadow: 'var(--shadow-nav)',
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  zIndex: 50,
+                }}
+              >
+                {/* Liste filtrée */}
+                {categories
+                  .filter((c) => c.name.toLowerCase().includes(categorySearch.trim().toLowerCase()))
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setCategoryId(c.id);
+                        setCategorySearch(c.name);
+                        setShowCategoryDropdown(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '10px 14px',
+                        background: categoryId === c.id ? 'var(--color-surface-alt)' : 'transparent',
+                        border: 'none',
+                        borderBottom: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>{c.name}</span>
+                      {categoryId === c.id && <CheckCircle size={14} color="var(--color-primary)" />}
+                    </button>
+                  ))}
+
+                {/* Option créer si introuvable */}
+                {categorySearch.trim() &&
+                  !categories.some((c) => c.name.toLowerCase() === categorySearch.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      disabled={addingCat}
+                      onClick={() => void handleCreateCategory(categorySearch)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '11px 14px',
+                        background: 'rgba(var(--color-primary-rgb, 197, 160, 89), 0.1)',
+                        border: 'none',
+                        color: 'var(--color-primary)',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <Plus size={16} />
+                      <span>
+                        {addingCat
+                          ? 'Création en cours…'
+                          : `Créer la catégorie « ${categorySearch.trim()} »`}
+                      </span>
+                    </button>
+                  )}
+
+                {categorySearch.trim() === '' && categories.length === 0 && (
+                  <div style={{ padding: '12px 14px', fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                    Tapez un nom pour créer la première catégorie.
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Prix fixé & Coût unitaire */}
+          {/* Prix de vente & Coût d'achat unitaire */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="item-price">Prix fixé (FCFA) *</label>
+              <label className="form-label" htmlFor="item-price">Prix de vente client (FCFA) *</label>
               <input
                 id="item-price"
                 className="zadri-input"
@@ -570,9 +712,12 @@ export const ItemForm: React.FC = () => {
                 placeholder="ex. 30000"
                 required
               />
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                Prix affiché et payé par le client
+              </p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="item-cost">Coût unitaire (FCFA)</label>
+              <label className="form-label" htmlFor="item-cost">Prix de revient unitaire (FCFA)</label>
               <input
                 id="item-cost"
                 className="zadri-input"
@@ -583,6 +728,9 @@ export const ItemForm: React.FC = () => {
                 onChange={(e) => setUnitCost(e.target.value)}
                 placeholder="Facultatif"
               />
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                Ce que vous a coûté l'article (achat)
+              </p>
             </div>
           </div>
 

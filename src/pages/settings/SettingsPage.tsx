@@ -2,15 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  CheckCircle,
   Clock,
   Edit2,
   Globe,
   KeyRound,
+  Lock,
   LogOut,
   Moon,
   Plus,
-  Save,
   Settings,
   Sun,
   Tag,
@@ -22,36 +21,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
   addCategory,
-  getAppSettings,
   getCategoriesWithCount,
   renameCategory,
-  updateAppSettings,
 } from '../../lib/settingsService';
-import type { AppSettings, CategoryItem } from '../../types/settings';
-
-const TIMEZONES = [
-  { id: 'UTC', label: 'UTC (Temps Universel)' },
-  { id: 'Africa/Abidjan', label: 'Afrique / Abidjan (GMT)' },
-  { id: 'Africa/Dakar', label: 'Afrique / Dakar (GMT)' },
-  { id: 'Africa/Lagos', label: 'Afrique / Lagos (GMT+1)' },
-  { id: 'Africa/Douala', label: 'Afrique / Douala (GMT+1)' },
-  { id: 'Europe/Paris', label: 'Europe / Paris (CET)' },
-  { id: 'Asia/Dubai', label: 'Asie / Dubaï (GST)' },
-  { id: 'Asia/Shanghai', label: 'Asie / Shanghai (CST)' },
-];
+import type { CategoryItem } from '../../types/settings';
 
 export const SettingsPage: React.FC = () => {
   const { user, profile, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
-
-  // Paramètres globaux
-  const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [watchDays, setWatchDays] = useState<number>(30);
-  const [clearanceDays, setClearanceDays] = useState<number>(60);
-  const [timezone, setTimezone] = useState<string>('UTC');
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsSuccess, setSettingsSuccess] = useState(false);
-  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   // Catégories
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -70,17 +47,10 @@ export const SettingsPage: React.FC = () => {
   const loadAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [sett, cats] = await Promise.all([
-        getAppSettings(),
-        getCategoriesWithCount(),
-      ]);
-      setSettings(sett);
-      setWatchDays(sett.watch_after_days);
-      setClearanceDays(sett.clearance_after_days);
-      setTimezone(sett.timezone);
+      const cats = await getCategoriesWithCount();
       setCategories(cats);
     } catch (err: any) {
-      setSettingsError(err?.message || 'Impossible de charger les paramètres.');
+      setCatError(err?.message || 'Impossible de charger les catégories.');
     } finally {
       setLoading(false);
     }
@@ -89,35 +59,6 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
-
-  // Sauvegarde des paramètres
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (watchDays <= 0) {
-      setSettingsError('Le seuil « À surveiller » doit être supérieur à 0.');
-      return;
-    }
-    if (clearanceDays <= watchDays) {
-      setSettingsError('Le seuil « À déstocker » doit être strictement supérieur au seuil « À surveiller ».');
-      return;
-    }
-
-    try {
-      setSavingSettings(true);
-      setSettingsError(null);
-      await updateAppSettings({
-        watch_after_days: watchDays,
-        clearance_after_days: clearanceDays,
-        timezone,
-      });
-      setSettingsSuccess(true);
-      setTimeout(() => setSettingsSuccess(false), 3000);
-    } catch (err: any) {
-      setSettingsError(err?.message || 'Erreur lors de la sauvegarde des paramètres.');
-    } finally {
-      setSavingSettings(false);
-    }
-  };
 
   // Ajout catégorie
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -230,99 +171,100 @@ export const SettingsPage: React.FC = () => {
               <div>
                 <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={16} color="var(--color-primary)" />
-                  Seuils d'ancienneté des invendus
+                  Configuration du système
                 </h2>
                 <p style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)', margin: '0 0 14px' }}>
-                  Ces seuils déterminent le passage automatique des articles en alerte dans le tableau de bord et sur l'écran Invendus.
+                  Ces paramètres définissent le fonctionnement standard de l'application (fixés par défaut).
                 </p>
               </div>
-              {settings?.updated_at && (
-                <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                  Maj: {new Date(settings.updated_at).toLocaleDateString('fr-FR')}
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  color: 'var(--color-text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  backgroundColor: 'var(--color-surface-alt)',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-pill)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                <Lock size={12} /> Standard système
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>
+                    À surveiller (jours)
+                  </label>
+                  <input
+                    type="number"
+                    disabled
+                    readOnly
+                    className="form-input"
+                    value={30}
+                    style={{
+                      opacity: 0.85,
+                      cursor: 'not-allowed',
+                      backgroundColor: 'var(--color-surface-alt)',
+                      fontWeight: 600,
+                    }}
+                  />
+                  <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                    Par défaut : 30 jours
+                  </span>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>
+                    À déstocker (jours)
+                  </label>
+                  <input
+                    type="number"
+                    disabled
+                    readOnly
+                    className="form-input"
+                    value={60}
+                    style={{
+                      opacity: 0.85,
+                      cursor: 'not-allowed',
+                      backgroundColor: 'var(--color-surface-alt)',
+                      fontWeight: 600,
+                    }}
+                  />
+                  <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                    Par défaut : 60 jours
+                  </span>
+                </div>
+              </div>
+
+              {/* Fuseau horaire */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Globe size={14} /> Fuseau horaire de l'application
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  readOnly
+                  className="form-input"
+                  value="UTC (Temps Universel)"
+                  style={{
+                    opacity: 0.85,
+                    cursor: 'not-allowed',
+                    backgroundColor: 'var(--color-surface-alt)',
+                    fontWeight: 600,
+                  }}
+                />
+                <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
+                  Utilisé pour regrouper les statistiques quotidiennes et mensuelles de vente.
                 </span>
-              )}
+              </div>
             </div>
-
-        <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label className="form-label" style={{ fontSize: '0.78rem' }}>
-                À surveiller (jours)
-              </label>
-              <input
-                type="number"
-                min={1}
-                required
-                className="form-input"
-                value={watchDays}
-                onChange={(e) => setWatchDays(Number(e.target.value))}
-              />
-              <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-                Par défaut : 30 jours
-              </span>
-            </div>
-
-            <div>
-              <label className="form-label" style={{ fontSize: '0.78rem' }}>
-                À déstocker (jours)
-              </label>
-              <input
-                type="number"
-                min={watchDays + 1}
-                required
-                className="form-input"
-                value={clearanceDays}
-                onChange={(e) => setClearanceDays(Number(e.target.value))}
-              />
-              <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-                Par défaut : 60 jours
-              </span>
-            </div>
-          </div>
-
-          {/* Fuseau horaire (§9.8) */}
-          <div>
-            <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Globe size={14} /> Fuseau horaire de l'application
-            </label>
-            <select
-              className="form-input"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz.id} value={tz.id}>
-                  {tz.label}
-                </option>
-              ))}
-            </select>
-            <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-              Utilisé pour regrouper les statistiques quotidiennes et mensuelles de vente.
-            </span>
-          </div>
-
-          {settingsError && (
-            <div style={{ color: 'var(--color-danger)', fontSize: '0.78rem' }}>
-              {settingsError}
-            </div>
-          )}
-
-          {settingsSuccess && (
-            <div style={{ color: 'var(--color-primary)', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <CheckCircle size={15} /> Paramètres enregistrés avec succès !
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={savingSettings}
-            className="btn-primary"
-            style={{ width: 'auto', alignSelf: 'flex-start', minHeight: '38px', padding: '0 18px', marginTop: '4px' }}
-          >
-            {savingSettings ? 'Enregistrement...' : <><Save size={16} /> Enregistrer les paramètres</>}
-          </button>
-        </form>
-      </section>
+          </section>
 
       {/* ── Section 2 : Gestion des Catégories d'Articles (§9.8) ────────── */}
       <section

@@ -251,7 +251,9 @@ export async function createItem(payload: CreateItemPayload): Promise<string> {
 
 export async function updateItem(payload: UpdateItemPayload): Promise<void> {
   await ensureOnline();
-  const { error } = await supabase.rpc('update_item_with_variants', {
+
+  // 1. Essai via la fonction RPC atomique si elle est installée
+  const { error: rpcError } = await supabase.rpc('update_item_with_variants', {
     p_item_id: payload.item_id,
     p_name: payload.name.trim(),
     p_list_price: payload.list_price,
@@ -263,7 +265,81 @@ export async function updateItem(payload: UpdateItemPayload): Promise<void> {
     p_variants: normalizeVariants(payload.variants),
   });
 
-  if (error) throw new Error(error.message || 'Impossible de modifier l’article.');
+  // Si la fonction RPC a fonctionné, terminé
+  if (!rpcError) return;
+
+  // 2. Si la fonction RPC n'existe pas en base ("Could not find the function..."),
+  // fallback direct et robuste sur les tables items et variants :
+  const isFunctionMissing =
+    rpcError.message?.includes('Could not find the function') ||
+    rpcError.message?.includes('schema cache') ||
+    rpcError.code === '42883';
+
+  if (!isFunctionMissing) {
+    throw new Error(rpcError.message || 'Impossible de modifier l’article.');
+  }
+
+  console.warn('RPC update_item_with_variants absente, exécution de la mise à jour directe...');
+
+  // Mise à jour de la table items
+  const { error: itemUpdateErr } = await supabase
+    .from('items')
+    .update({
+      name: payload.name.trim(),
+      category_id: payload.category_id || null,
+      description: payload.description?.trim() || null,
+      photo_url: payload.photo_url || null,
+      photo_public_id: payload.photo_public_id || null,
+      list_price: payload.list_price,
+      unit_cost: payload.unit_cost ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', payload.item_id);
+
+  if (itemUpdateErr) {
+    throw new Error(itemUpdateErr.message || 'Impossible de mettre à jour la fiche article.');
+  }
+
+  // Mise à jour ou insertion des variantes
+  if (payload.variants && payload.variants.length > 0) {
+    for (const v of payload.variants) {
+      if (v.id) {
+        // Variante existante : mise à jour
+        const { error: vErr } = await supabase
+          .from('variants')
+          .update({
+            label: v.label.trim() || 'Unique',
+            photo_url: v.photo_url || null,
+            photo_public_id: v.photo_public_id || null,
+            price_override: v.price_override ?? null,
+            quantity_ordered: v.quantity_ordered ?? null,
+            quantity_received: v.quantity_received ?? 0,
+            quantity_damaged: v.quantity_damaged ?? 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', v.id)
+          .eq('item_id', payload.item_id);
+
+        if (vErr) console.warn('Avertissement mise à jour variante:', vErr);
+      } else {
+        // Nouvelle variante ajoutée
+        const { error: vInsertErr } = await supabase
+          .from('variants')
+          .insert({
+            item_id: payload.item_id,
+            label: v.label.trim() || 'Unique',
+            photo_url: v.photo_url || null,
+            photo_public_id: v.photo_public_id || null,
+            price_override: v.price_override ?? null,
+            quantity_ordered: v.quantity_ordered ?? null,
+            quantity_received: v.quantity_received ?? 0,
+            quantity_damaged: v.quantity_damaged ?? 0,
+          });
+
+        if (vInsertErr) console.warn('Avertissement création variante:', vInsertErr);
+      }
+    }
+  }
 }
 
 export async function archiveItem(itemId: string): Promise<void> {

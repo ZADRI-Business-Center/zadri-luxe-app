@@ -8,6 +8,7 @@ import { getCategories, getItemCatalog, getReceivedOrders } from '../../lib/item
 import { formatFCFA } from '../../types/orders';
 import { DORMANT_STATUS_CONFIG } from '../../types/items';
 import type { Category, DormantStatus, ItemCatalogEntry, ReceivedOrderOption } from '../../types/items';
+import { formatErrorMessage } from '../../lib/errorUtils';
 
 export const ItemsList: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export const ItemsList: React.FC = () => {
       setCategories(categoryList);
       setOrders(orderList);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Impossible de charger les articles.');
+      setError(formatErrorMessage(reason, 'Impossible de charger la liste des articles.'));
     } finally {
       setLoading(false);
     }
@@ -54,9 +55,6 @@ export const ItemsList: React.FC = () => {
     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '16px 16px 90px', width: '100%' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         <div><span className="zadri-logo-label">ZADRI LUXE</span><h1 style={{ fontSize: '1.45rem', marginTop: '2px' }}>Articles</h1></div>
-        <Link to="/articles/nouveau" className="btn-primary" style={{ width: 'auto', minHeight: '42px', padding: '0 15px', borderRadius: 'var(--radius-pill)' }}>
-          <Plus size={18} /> Nouveau
-        </Link>
       </header>
 
       <div style={{ position: 'relative', marginBottom: '10px' }}>

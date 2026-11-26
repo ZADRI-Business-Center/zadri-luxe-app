@@ -8,7 +8,8 @@ import {
   suggestNextReference,
 } from '../../lib/ordersService';
 import type { OrderOrigin, OrderStatus } from '../../types/orders';
-import { ORIGIN_CONFIG, STATUS_CONFIG, formatFCFA } from '../../types/orders';
+import { ORIGIN_CONFIG, formatFCFA } from '../../types/orders';
+import { formatErrorMessage } from '../../lib/errorUtils';
 
 export const OrderForm: React.FC = () => {
   const navigate = useNavigate();
@@ -20,11 +21,9 @@ export const OrderForm: React.FC = () => {
   const [customOrigin, setCustomOrigin] = useState('');
   const [reference, setReference] = useState('');
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [supplier, setSupplier] = useState('');
-  const [description, setDescription] = useState('');
+  const [expectedArticles, setExpectedArticles] = useState(''); // Articles attendus dans la commande
   const [purchaseAmount, setPurchaseAmount] = useState<number | ''>('');
   const [forwarderFee, setForwarderFee] = useState<number | ''>(0);
-  const [weightKg, setWeightKg] = useState<string>('');
   const [status, setStatus] = useState<OrderStatus>('ordered');
   const [receivedDate, setReceivedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
@@ -60,11 +59,10 @@ export const OrderForm: React.FC = () => {
 
           setReference(order.reference);
           setOrderDate(order.order_date);
-          setSupplier(order.supplier);
-          setDescription(order.description || '');
+          // Recompose le champ articles attendus depuis description (ou supplier si pas de description)
+          setExpectedArticles(order.description || order.supplier || '');
           setPurchaseAmount(order.purchase_amount);
           setForwarderFee(order.forwarder_fee);
-          setWeightKg(order.weight_kg !== null ? String(order.weight_kg) : '');
           setStatus(order.status);
           if (order.received_date) {
             setReceivedDate(order.received_date);
@@ -75,7 +73,7 @@ export const OrderForm: React.FC = () => {
         })
         .catch((err) => {
           console.error(err);
-          setErrorMessage(err.message || 'Impossible de charger la commande.');
+          setErrorMessage(formatErrorMessage(err, 'Impossible de charger la commande.'));
         })
         .finally(() => {
           setLoadingInitial(false);
@@ -95,14 +93,8 @@ export const OrderForm: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // Validations
-    if (!supplier.trim()) {
-      setErrorMessage('Le nom du fournisseur est obligatoire.');
-      return;
-    }
-
     if (purchaseAmount === '' || numPurchase < 0) {
-      setErrorMessage('Le montant d’achat doit être un nombre positif ou nul.');
+      setErrorMessage('Le montant d\'achat doit être un nombre positif ou nul.');
       return;
     }
 
@@ -117,6 +109,8 @@ export const OrderForm: React.FC = () => {
     }
 
     const finalOrigin = origin === 'Autre' && customOrigin.trim() ? customOrigin.trim() : origin;
+    // supplier alimenté par expectedArticles ou l'origine (jamais vide pour compatibilité DB)
+    const supplierValue = expectedArticles.trim() || finalOrigin;
 
     try {
       setSubmitting(true);
@@ -124,13 +118,13 @@ export const OrderForm: React.FC = () => {
       if (isEditing && id) {
         await updateOrder(id, {
           reference: reference.trim() || undefined,
-          supplier: supplier.trim(),
+          supplier: supplierValue,
           origin: finalOrigin,
           order_date: orderDate,
-          description: description.trim() || undefined,
+          description: expectedArticles.trim() || undefined,
           purchase_amount: numPurchase,
           forwarder_fee: numTransport,
-          weight_kg: weightKg ? parseFloat(weightKg) : null,
+          weight_kg: null,
           status,
           received_date: status === 'received' ? receivedDate : null,
           notes: notes.trim(),
@@ -139,13 +133,13 @@ export const OrderForm: React.FC = () => {
       } else {
         const created = await createOrder({
           reference: reference.trim() || undefined,
-          supplier: supplier.trim(),
+          supplier: supplierValue,
           origin: finalOrigin,
           order_date: orderDate,
-          description: description.trim() || undefined,
+          description: expectedArticles.trim() || undefined,
           purchase_amount: numPurchase,
           forwarder_fee: numTransport,
-          weight_kg: weightKg ? parseFloat(weightKg) : null,
+          weight_kg: null,
           status,
           received_date: status === 'received' ? receivedDate : null,
           notes: notes.trim(),
@@ -154,7 +148,7 @@ export const OrderForm: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err.message || 'Une erreur est survenue lors de l’enregistrement.');
+      setErrorMessage(formatErrorMessage(err, 'Une erreur est survenue lors de l\'enregistrement de la commande.'));
     } finally {
       setSubmitting(false);
     }
@@ -315,7 +309,7 @@ export const OrderForm: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Section 2 : Fournisseur & Description ────────────────────────── */}
+        {/* ── Section 2 : Articles attendus ─────────────────────────────────── */}
         <div style={{
           backgroundColor: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
@@ -324,32 +318,20 @@ export const OrderForm: React.FC = () => {
           marginBottom: '16px',
           boxShadow: 'var(--shadow-sm)',
         }}>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>
-              Fournisseur / Boutique / Atelier <span style={{ color: 'var(--color-accent)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={supplier}
-              onChange={(e) => setSupplier(e.target.value)}
-              placeholder="Ex: Usine Guangzhou, Fournisseur Adjamé, Grossiste Deira…"
-              className="zadri-input"
-              required
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-              Description générale (facultative)
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Lot de montres automatiques et bracelets cuir"
-              className="zadri-input"
-            />
-          </div>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>
+            Articles attendus dans cette commande
+          </label>
+          <textarea
+            rows={3}
+            value={expectedArticles}
+            onChange={(e) => setExpectedArticles(e.target.value)}
+            placeholder="Ex: 10 montres automatiques or, 5 bracelets cuir marron, 3 ceintures…"
+            className="zadri-input"
+            style={{ resize: 'vertical' }}
+          />
+          <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+            Décrivez brièvement les articles commandés. Vous pourrez les enregistrer en détail à la réception.
+          </p>
         </div>
 
         {/* ── Section 3 : Coûts financiers & Calcul en direct ───────────────── */}
@@ -370,7 +352,7 @@ export const OrderForm: React.FC = () => {
 
           <div style={{ marginBottom: '14px' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>
-              Montant d'achat de la marchandise (FCFA) <span style={{ color: 'var(--color-accent)' }}>*</span>
+              Coût d'achat de la marchandise (FCFA) <span style={{ color: 'var(--color-accent)' }}>*</span>
             </label>
             <input
               type="number"
@@ -385,38 +367,19 @@ export const OrderForm: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: origin === 'Local' ? '1fr' : '1.4fr 1fr', gap: '12px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>
-                {currentOriginConfig.transportLabel}
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={forwarderFee}
-                onChange={(e) => setForwarderFee(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
-                placeholder="0"
-                className="zadri-input"
-              />
-            </div>
-
-            {origin !== 'Local' && (
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                  Poids (kg facultatif)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={weightKg}
-                  onChange={(e) => setWeightKg(e.target.value)}
-                  placeholder="Ex: 5.5"
-                  className="zadri-input"
-                />
-              </div>
-            )}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>
+              {currentOriginConfig.transportLabel}
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={forwarderFee}
+              onChange={(e) => setForwarderFee(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+              placeholder="0"
+              className="zadri-input"
+            />
           </div>
 
           {/* Badge Coût Total en direct */}
@@ -458,35 +421,47 @@ export const OrderForm: React.FC = () => {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '8px',
             marginBottom: status === 'received' ? '14px' : '0',
           }}>
-            {(['ordered', 'shipping', 'received'] as const).map((st) => {
-              const isSelected = status === st;
-              const cfg = STATUS_CONFIG[st];
+            {/* Commandée */}
+            <button
+              type="button"
+              onClick={() => setStatus('ordered')}
+              style={{
+                padding: '12px 8px',
+                borderRadius: 'var(--radius-card-md)',
+                border: status === 'ordered' ? '2px solid var(--color-info, #2563eb)' : '1px solid var(--color-border)',
+                backgroundColor: status === 'ordered' ? 'rgba(37, 99, 235, 0.12)' : 'var(--color-surface-alt)',
+                color: status === 'ordered' ? 'var(--color-info, #2563eb)' : 'var(--color-text)',
+                fontWeight: status === 'ordered' ? 700 : 500,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              📦 Commandée
+            </button>
 
-              return (
-                <button
-                  type="button"
-                  key={st}
-                  onClick={() => setStatus(st)}
-                  style={{
-                    padding: '10px 8px',
-                    borderRadius: 'var(--radius-card-md)',
-                    border: isSelected ? `2px solid ${cfg.color}` : '1px solid var(--color-border)',
-                    backgroundColor: isSelected ? cfg.bg : 'var(--color-surface-alt)',
-                    color: isSelected ? cfg.color : 'var(--color-text)',
-                    fontWeight: isSelected ? 700 : 500,
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {cfg.label}
-                </button>
-              );
-            })}
+            {/* Reçue */}
+            <button
+              type="button"
+              onClick={() => setStatus('received')}
+              style={{
+                padding: '12px 8px',
+                borderRadius: 'var(--radius-card-md)',
+                border: status === 'received' ? '2px solid var(--color-success, #16a34a)' : '1px solid var(--color-border)',
+                backgroundColor: status === 'received' ? 'rgba(22, 163, 74, 0.12)' : 'var(--color-surface-alt)',
+                color: status === 'received' ? 'var(--color-success, #16a34a)' : 'var(--color-text)',
+                fontWeight: status === 'received' ? 700 : 500,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              ✅ Reçue
+            </button>
           </div>
 
           {status === 'received' && (
@@ -522,13 +497,13 @@ export const OrderForm: React.FC = () => {
           boxShadow: 'var(--shadow-sm)',
         }}>
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-            Notes & remarques (transitaire, détails de paiement…)
+            Notes & remarques (facultatif)
           </label>
           <textarea
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Informations utiles pour vous et votre associé…"
+            placeholder="Informations utiles : transitaire, détails de paiement, coordonnées…"
             className="zadri-input"
             style={{ resize: 'vertical' }}
           />

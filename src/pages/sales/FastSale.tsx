@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowLeft,
   CheckCircle,
-  Clock,
   FileText,
   Minus,
   Plus,
@@ -50,9 +49,7 @@ export const FastSale: React.FC = () => {
   const [soldTotal, setSoldTotal] = useState<string>('');
   const [channel, setChannel] = useState<SaleChannel>(getLastUsedChannel());
 
-  // Détails facultatifs (fermés par défaut)
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [soldAtDate, setSoldAtDate] = useState<string>('');
+  // Détails facultatifs (note)
   const [note, setNote] = useState('');
 
   // Soumission & feedback
@@ -189,11 +186,6 @@ function triggerHaptic(pattern: number | number[] = 15) {
       setSubmitting(true);
       setError(null);
 
-      let saleDateIso: string | undefined;
-      if (soldAtDate) {
-        saleDateIso = new Date(soldAtDate).toISOString();
-      }
-
       // Identifiant client UUID pour idempotency et renvoi sans doublon (§11 & §18)
       const clientSaleId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined;
 
@@ -203,7 +195,6 @@ function triggerHaptic(pattern: number | number[] = 15) {
         quantity,
         sold_total: currentTotalNumber,
         channel,
-        sold_at: saleDateIso,
         note: note.trim() || null,
       });
 
@@ -236,8 +227,6 @@ function triggerHaptic(pattern: number | number[] = 15) {
     setQuantity(1);
     setSoldTotal('');
     setNote('');
-    setSoldAtDate('');
-    setShowAdvanced(false);
   };
 
   return (
@@ -975,7 +964,7 @@ function triggerHaptic(pattern: number | number[] = 15) {
                 </div>
               </div>
 
-              {/* Optionnel : Date et note (repliable) */}
+              {/* Note interne (facultative) */}
               <div
                 style={{
                   background: 'var(--color-surface)',
@@ -984,56 +973,16 @@ function triggerHaptic(pattern: number | number[] = 15) {
                   padding: '12px 16px',
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced((p) => !p)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-text-muted)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    padding: '4px 0',
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Clock size={15} /> Date personnalisée ou note facultative
-                  </span>
-                  <span>{showAdvanced ? '▲' : '▼'}</span>
-                </button>
-
-                {showAdvanced && (
-                  <div style={{ paddingTop: '14px', borderTop: '1px solid var(--color-border)', marginTop: '8px' }}>
-                    <div style={{ marginBottom: '12px' }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem' }}>Date et heure de vente</label>
-                      <input
-                        type="datetime-local"
-                        className="form-input"
-                        value={soldAtDate}
-                        onChange={(e) => setSoldAtDate(e.target.value)}
-                      />
-                      <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '3px' }}>
-                        Laissez vide pour horodater à l'instant présent.
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.78rem' }}>Note interne (facultative)</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Ex. Client fidèle, remise négociée..."
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
+                <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '6px' }}>
+                  Note sur la vente (facultative)
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Ex. Client fidèle, remise spéciale, contact..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
               </div>
 
               {/* Bouton de validation tactile principal */}

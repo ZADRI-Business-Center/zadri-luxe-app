@@ -1,6 +1,6 @@
 export type OrderOrigin = 'Chine' | 'Local' | 'Dubaï' | 'Turquie' | 'Autre';
 
-export type OrderStatus = 'ordered' | 'shipping' | 'received';
+export type OrderStatus = 'ordered' | 'shipping' | 'received'; // 'shipping' conservé pour compatibilité DB
 
 export interface Order {
   id: string;

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Sun, Moon } from 'lucide-react';
+import { formatErrorMessage } from '../lib/errorUtils';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -37,13 +38,7 @@ export const Login: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setErrorMessage('Email ou mot de passe incorrect.');
-        } else if (error.message.includes('Email not confirmed')) {
-          setErrorMessage('Veuillez confirmer votre adresse email avant de vous connecter.');
-        } else {
-          setErrorMessage(error.message || 'Une erreur est survenue lors de la connexion.');
-        }
+        setErrorMessage(formatErrorMessage(error, 'Une erreur est survenue lors de la connexion.'));
       } else {
         navigate(from, { replace: true });
       }
